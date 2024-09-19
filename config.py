@@ -1,6 +1,6 @@
 TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "7383809543:AAFaxynQ9-D5Wizsl-EJ2U7OH-ymcAr_njY")
 
-    APP_ID = int(os.environ.get("APP_ID", 16457832))
+    APP_ID = int(os.environ.get("APP_ID", "16457832"))
 
     API_HASH = os.environ.get("API_HASH", "3030874d0befdb5d05597deacc3e83ab")
 
