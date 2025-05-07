@@ -14,19 +14,19 @@
     "env": {
         "TG_BOT_TOKEN": {
             "description": "You Telegram Bot Token from @BotFather",
-            "value": ""
+            "value": "7850386310:AAFHTXecLRW9AdVwBLGKlqe6aZlBZckMFvs"
         },
         "API_HASH": {
             "description": "Your API Hash from my.telegram.org",
-            "value": ""
+            "value": "0a33bc287078d4dace12aaecc8e73545"
         },
         "APP_ID": {
             "description": "Your APP ID from my.telegram.org",
-            "value": ""
+            "value": "14853951"
         },
         "RemoveBG_API": {
             "description": "Get this api from https://www.remove.bg/b/background-removal-api",
-            "value": "",
+            "value": "vzxJSig9pi5j4xvDX3ykqzyc",
             "required": false
         },
         "WEBHOOK": {
