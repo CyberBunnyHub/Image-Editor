@@ -1,15 +1,25 @@
+def run_bot():
+    print("Bot is running...")
+    
+    import threading
 from flask import Flask
 import os
 
+# Run Flask dummy server in a thread
 app = Flask(__name__)
 
-@app.route("/")
+@app.route('/')
 def home():
-    return "Hello from Render!"
+    return "Telegram bot running on Render."
+
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    # Start dummy web server in background
+    threading.Thread(target=run_flask).start()
+
 
 
 # By @TroJanzHEX
