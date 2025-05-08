@@ -1,7 +1,7 @@
 def run_bot():
     print("Bot is running...")
-    
-    import threading
+
+import threading
 from flask import Flask
 import os
 
