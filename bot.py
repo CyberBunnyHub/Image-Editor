@@ -77,6 +77,31 @@ async def start_cmd(client: Client, message: Message):
         quote=True
     )
 
+@bot.on_callback_query(filters.regex("help"))
+async def help_callback(client, callback_query):
+    help_text = (
+        "<b>👋 Welcome to my store</b>\n\n"
+        "<blockquote>Note: Under Construction 🚧</blockquote>"
+    )
+
+    buttons = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📊 Stats", callback_data="stats"),
+            InlineKeyboardButton("🗄 Database", callback_data="database")
+        ],
+        [
+            InlineKeyboardButton("👥 Admins", callback_data="admins"),
+            InlineKeyboardButton("🔙 Back", callback_data="start_back")
+        ]
+    ])
+
+    await callback_query.message.edit_text(
+        help_text,
+        reply_markup=buttons,
+        parse_mode="html",
+        disable_web_page_preview=True
+    )
+
 @bot.on_callback_query(filters.regex("refresh_force_sub"))
 async def refresh_subscription(client, callback_query):
     try:
