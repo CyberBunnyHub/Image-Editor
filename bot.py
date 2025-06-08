@@ -15,7 +15,7 @@ def home():
 API_ID = int(os.getenv("API_ID", "14853951"))
 API_HASH = os.getenv("API_HASH", "0a33bc287078d4dace12aaecc8e73545")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "7845318227:AAFIWjneKzVu_MmAsNDkD3B6NvXzlbMdCgU")
-FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "-1002095080113")  # Use channel ID here
+FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "-1002614983879")  # Use channel ID here
 
 bot = Client("autofilter-bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
