@@ -2,10 +2,10 @@ from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant, ChatAdminRequired
+from pyrogram.enums import ParseMode
 import os
 import threading
 import random
-import asyncio
 
 app = Flask(__name__)
 
@@ -98,7 +98,67 @@ async def help_callback(client, callback_query):
     await callback_query.message.edit_text(
         help_text,
         reply_markup=buttons,
-        parse_mode="html",
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True
+    )
+
+@bot.on_callback_query(filters.regex("start_back"))
+async def back_to_start(client, callback_query):
+    user = callback_query.from_user
+    image_urls = [
+        "https://i.ibb.co/cSkDcyQH/d2c3ffef1693.jpg",
+        "https://i.ibb.co/KcD29Vw6/36ea5dbb65f5.jpg",
+        "https://i.ibb.co/HpdYbs21/93eaa5026aa1.jpg"
+    ]
+    image_url = random.choice(image_urls)
+    me = await client.get_me()
+
+    caption = (
+        f"**Hᴇʟʟᴏ {user.mention} 👋,**\n"
+        "I'ᴍ Lᴀᴛᴇꜱᴛ Aᴅᴠᴀɴᴄᴇᴅ & Pᴏᴡᴇʀꜰᴜʟ Aᴜᴛᴏ Fɪʟᴛᴇʀ Bᴏᴛ.\n\n"
+        "**🎬 Just send a movie name to get files.**\n"
+        "**➕ Add me to your group and enjoy magic filters!**"
+    )
+
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("➕ Add Me To Group", url=f"https://t.me/{me.username}?startgroup=true")],
+        [InlineKeyboardButton("ℹ️ Help", callback_data="help"),
+         InlineKeyboardButton("🧑‍💻 About", callback_data="about")],
+        [InlineKeyboardButton("📢 Updates", url="https://t.me/YourUpdateChannel"),
+         InlineKeyboardButton("🆘 Support", url="https://t.me/YourSupportChat")]
+    ])
+
+    await callback_query.message.delete()
+    await client.send_photo(
+        chat_id=callback_query.message.chat.id,
+        photo=image_url,
+        caption=caption,
+        reply_markup=buttons,
+        parse_mode=ParseMode.MARKDOWN
+    )
+
+@bot.on_callback_query(filters.regex("about"))
+async def about_callback(client, callback_query):
+    me = await client.get_me()
+    bot_username = me.username
+
+    about_text = (
+        "─────── 🍿<b>About Me</b> ───────\n\n"
+        "-ˋˏ✄ Iᴍ Aɴ <a href='https://t.me/{0}'>Aᴜᴛᴏ Fɪʟᴛᴇʀ Bᴏᴛ</a>\n"
+        "-ˋˏ✄ Bᴜɪʟᴛ Wɪᴛʜ 💌 <a href='https://www.python.org/'>Pʏᴛʜᴏɴ</a> & <a href='https://docs.pyrogram.org/'>Pʏʀᴏɢʀᴀᴍ</a>\n"
+        "-ˋˏ✄ Dᴀᴛᴀʙᴀsᴇ : <a href='https://www.mongodb.com/'>MᴏɴɢᴏDB</a>\n"
+        "-ˋˏ✄ Bᴏᴛ Sᴇʀᴠᴇʀ : <a href='https://Render.com/'>Rᴇɴᴅᴇʀ</a>"
+    ).format(bot_username)
+
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("👑 Lord", url="https://t.me/YourUsername")],
+        [InlineKeyboardButton("🔙 Back", callback_data="start_back")]
+    ])
+
+    await callback_query.message.edit_text(
+        about_text,
+        reply_markup=buttons,
+        parse_mode=ParseMode.HTML,
         disable_web_page_preview=True
     )
 
