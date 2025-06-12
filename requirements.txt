@@ -1,4 +1,5 @@
 NumPy
+pymongo
 tgcrypto
 Pillow
 pyrogram
