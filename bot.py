@@ -2,10 +2,11 @@ from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant, ChatAdminRequired
-from pyrogram.enums import ParseMode
+from pymongo import MongoClient
 import os
 import threading
 import random
+import asyncio
 
 app = Flask(__name__)
 
@@ -17,12 +18,28 @@ API_ID = int(os.getenv("API_ID", "14853951"))
 API_HASH = os.getenv("API_HASH", "0a33bc287078d4dace12aaecc8e73545")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "7845318227:AAFIWjneKzVu_MmAsNDkD3B6NvXzlbMdCgU")
 FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "-1002614983879")
+MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/")
+
+mongo_client = MongoClient(MONGO_URL)
+db = mongo_client["broadcast_bot"]
+users_collection = db["users"]
 
 bot = Client("autofilter-bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 @bot.on_message(filters.command("start") & filters.private)
 async def start_cmd(client: Client, message: Message):
     user = message.from_user
+
+    users_collection.update_one(
+        {"_id": user.id},
+        {"$set": {
+            "name": user.first_name,
+            "username": user.username,
+            "joined_at": message.date
+        }},
+        upsert=True
+    )
+
     loading = await message.reply("🍿", quote=True)
 
     try:
@@ -98,7 +115,32 @@ async def help_callback(client, callback_query):
     await callback_query.message.edit_text(
         help_text,
         reply_markup=buttons,
-        parse_mode=ParseMode.HTML,
+        parse_mode="html",
+        disable_web_page_preview=True
+    )
+
+@bot.on_callback_query(filters.regex("about"))
+async def about_callback(client, callback_query):
+    me = await client.get_me()
+    bot_username = me.username
+
+    about_text = (
+        "─────── 🍿<b>About Me</b> ───────\n\n"
+        "-ˋˏ✄ Iᴍ Aɴ <a href='https://t.me/{0}'>Aᴜᴛᴏ Fɪʟᴛᴇʀ Bᴏᴛ</a>\n"
+        "-ˋˏ✄ Bᴜɪʟᴛ Wɪᴛʜ 💌 <a href='https://www.python.org/'>Pʏᴛʜᴏɴ</a> & <a href='https://docs.pyrogram.org/'>Pʏʀᴏɢʀᴀᴍ</a>\n"
+        "-ˋˏ✄ Dᴀᴛᴀʙᴀsᴇ : <a href='https://www.mongodb.com/'>MᴏɴɢᴏDB</a>\n"
+        "-ˋˏ✄ Bᴏᴛ Sᴇʀᴠᴇʀ : <a href='https://Render.com/'>Rᴇɴᴅᴇʀ</a>"
+    ).format(bot_username)
+
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("👑 Lord", url="https://t.me/YourUsername")],
+        [InlineKeyboardButton("🔙 Back", callback_data="start_back")]
+    ])
+
+    await callback_query.message.edit_text(
+        about_text,
+        reply_markup=buttons,
+        parse_mode="html",
         disable_web_page_preview=True
     )
 
@@ -129,38 +171,51 @@ async def back_to_start(client, callback_query):
     ])
 
     await callback_query.message.delete()
-    await client.send_photo(
-        chat_id=callback_query.message.chat.id,
+    await callback_query.message.chat.send_photo(
         photo=image_url,
         caption=caption,
-        reply_markup=buttons,
-        parse_mode=ParseMode.MARKDOWN
+        reply_markup=buttons
     )
 
-@bot.on_callback_query(filters.regex("about"))
-async def about_callback(client, callback_query):
-    me = await client.get_me()
-    bot_username = me.username
+@bot.on_message(filters.command("broadcast") & filters.private)
+async def broadcast_cmd(client: Client, message: Message):
+    if message.from_user.id != 123456789:  # Replace with your ID
+        return await message.reply("You are not authorized to use this command.")
 
-    about_text = (
-        "─────── 🍿<b>About Me</b> ───────\n\n"
-        "-ˋˏ✄ Iᴍ Aɴ <a href='https://t.me/{0}'>Aᴜᴛᴏ Fɪʟᴛᴇʀ Bᴏᴛ</a>\n"
-        "-ˋˏ✄ Bᴜɪʟᴛ Wɪᴛʜ 💌 <a href='https://www.python.org/'>Pʏᴛʜᴏɴ</a> & <a href='https://docs.pyrogram.org/'>Pʏʀᴏɢʀᴀᴍ</a>\n"
-        "-ˋˏ✄ Dᴀᴛᴀʙᴀsᴇ : <a href='https://www.mongodb.com/'>MᴏɴɢᴏDB</a>\n"
-        "-ˋˏ✄ Bᴏᴛ Sᴇʀᴠᴇʀ : <a href='https://Render.com/'>Rᴇɴᴅᴇʀ</a>"
-    ).format(bot_username)
+    if message.reply_to_message:
+        broadcast_message = message.reply_to_message
+    else:
+        if len(message.command) < 2:
+            return await message.reply("Usage: /broadcast <message> or reply to a message.")
+        broadcast_message = message.text.split(None, 1)[1]
 
-    buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("👑 Lord", url="https://t.me/YourUsername")],
-        [InlineKeyboardButton("🔙 Back", callback_data="start_back")]
-    ])
+    status_msg = await message.reply("📡 Broadcasting...", quote=True)
+    sent, failed = 0, 0
 
-    await callback_query.message.edit_text(
-        about_text,
-        reply_markup=buttons,
-        parse_mode=ParseMode.HTML,
-        disable_web_page_preview=True
+    for user in users_collection.find():
+        try:
+            if isinstance(broadcast_message, str):
+                await client.send_message(user["_id"], broadcast_message)
+            else:
+                await broadcast_message.copy(user["_id"])
+            sent += 1
+        except:
+            failed += 1
+
+    await status_msg.edit_text(
+        f"✅ <b>Broadcast completed</b>\n\n"
+        f"👤 Sent: <code>{sent}</code>\n"
+        f"❌ Failed: <code>{failed}</code>",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("↩️ OK", callback_data="broadcast_done")]
+        ]),
+        parse_mode="html"
     )
+
+@bot.on_callback_query(filters.regex("broadcast_done"))
+async def broadcast_done_callback(client, callback_query):
+    await callback_query.answer("Broadcast report closed.", show_alert=False)
+    await callback_query.message.delete()
 
 @bot.on_callback_query(filters.regex("refresh_force_sub"))
 async def refresh_subscription(client, callback_query):
