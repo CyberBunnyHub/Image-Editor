@@ -16,6 +16,7 @@ def home():
 
 API_ID = int(os.getenv("API_ID", "14853951"))
 API_HASH = os.getenv("API_HASH", "0a33bc287078d4dace12aaecc8e73545")
+ADMINS = [6887303054]
 BOT_TOKEN = os.getenv("BOT_TOKEN", "7845318227:AAFIWjneKzVu_MmAsNDkD3B6NvXzlbMdCgU")
 FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "-1002614983879")
 
@@ -180,23 +181,39 @@ async def refresh_subscription(client, callback_query):
 
 @bot.on_message(filters.command("broadcast") & filters.private)
 async def broadcast_cmd(client, message: Message):
+    if message.from_user.id not in ADMINS:
+        return await message.reply("🚫 You are not authorized to use this command.")
+
     if not message.reply_to_message:
         return await message.reply("Reply to a message to broadcast.")
-    status = await message.reply("📢 Broadcasting message...")
-    success = 0
+
+    if not os.path.exists("users.txt"):
+        return await message.reply("No users found.")
+
+    status = await message.reply("📢 Broadcasting...")
+
+    sent = 0
     failed = 0
-    total = 0
-    for user_id in USERS.copy():
+
+    with open("users.txt", "r") as f:
+        users = list(set([int(u.strip()) for u in f if u.strip().isdigit()]))
+
+    for user_id in users:
         try:
-            await client.copy_message(chat_id=user_id, from_chat_id=message.chat.id, message_id=message.reply_to_message.id)
-            success += 1
+            await client.copy_message(
+                chat_id=user_id,
+                from_chat_id=message.chat.id,
+                message_id=message.reply_to_message.id
+            )
+            sent += 1
         except FloodWait as e:
             await asyncio.sleep(e.value)
-        except:
+        except Exception:
             failed += 1
-        total += 1
-    await status.edit(f"✅ Broadcast completed.\n\n👥 Total: {total}\n✅ Sent: {success}\n❌ Failed: {failed}")
+        await asyncio.sleep(0.1)
 
+    await status.edit(f"✅ Broadcast complete.\n\n👥 Users: {len(users)}\n✅ Sent: {sent}\n❌ Failed: {failed}")
+    
 def run_flask():
     app.run(host="0.0.0.0", port=8000)
 
