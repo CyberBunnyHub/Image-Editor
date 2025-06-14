@@ -35,6 +35,7 @@ bot = Client("autofilter-bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_T
 
 @bot.on_message(filters.private & filters.command("start"))
 async def start_cmd(client: Client, message: Message):
+    args = message.text.split()
     user = message.from_user
     loading = await message.reply("🍿", quote=True)
     try:
@@ -54,6 +55,21 @@ async def start_cmd(client: Client, message: Message):
             ])
         )
     await loading.delete()
+
+    if len(args) > 1 and args[1].startswith("get_"):
+        file_id = args[1][4:]
+        movie = movies_collection.find_one({"files.file_id": file_id})
+        if not movie:
+            return await message.reply("❌ File not found.")
+        for file in movie["files"]:
+            if file["file_id"] == file_id:
+                return await message.reply_document(
+                    document=file["file_id"],
+                    caption=f"`{file['file_name']}`",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+        return
+
     me = await client.get_me()
     image_url = random.choice([
         "https://i.ibb.co/cSkDcyQH/d2c3ffef1693.jpg",
@@ -131,10 +147,38 @@ async def send_file(client, callback_query):
 @bot.on_callback_query(filters.regex("help"))
 async def help_callback(client, callback_query):
     buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 Stats", callback_data="stats")],
         [InlineKeyboardButton("🔙 Back", callback_data="start_back")]
     ])
     await callback_query.message.edit_text(
         "<b>👋 Welcome to my store</b>\n\n<blockquote>Note: Under Construction 🚧</blockquote>",
+        reply_markup=buttons,
+        parse_mode=ParseMode.HTML
+    )
+
+@bot.on_callback_query(filters.regex("stats"))
+async def stats_callback(client, callback_query):
+    total_movies = movies_collection.count_documents({})
+    total_files = 0
+    languages = set()
+    for movie in movies_collection.find():
+        files = movie.get("files", [])
+        total_files += len(files)
+        for f in files:
+            lang = f.get("language")
+            if lang:
+                languages.add(lang.lower())
+    stats_text = (
+        "<b>📊 Bot Stats:</b>\n\n"
+        f"🎬 Total Movies: <code>{total_movies}</code>\n"
+        f"📁 Total Files: <code>{total_files}</code>\n"
+        f"🌐 Languages: <code>{', '.join(sorted(languages)) or 'N/A'}</code>\n"
+    )
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔙 Back", callback_data="help")]
+    ])
+    await callback_query.message.edit_text(
+        stats_text,
         reply_markup=buttons,
         parse_mode=ParseMode.HTML
     )
@@ -202,6 +246,41 @@ async def bot_added_to_group(client, member: ChatMemberUpdated):
                  InlineKeyboardButton("🧑‍💻 About", callback_data="about")]
             ])
         )
+
+@bot.on_message(filters.channel)
+async def save_file_from_channel(client: Client, message: Message):
+    if not message.document and not message.video:
+        return
+    caption = message.caption or ""
+    lines = caption.splitlines()
+    if len(lines) >= 1:
+        if "🎬" in lines[0] and "|" in lines[0]:
+            parts = lines[0].split("|")
+            title = parts[0].replace("🎬", "").strip()
+            language = parts[1].strip()
+        else:
+            title = "Unknown"
+            language = "Unknown"
+    else:
+        title = "Unknown"
+        language = "Unknown"
+    file_info = {
+        "file_id": message.document.file_id if message.document else message.video.file_id,
+        "file_name": message.document.file_name if message.document else "Video.mp4",
+        "language": language
+    }
+    existing = movies_collection.find_one({"title": title})
+    if existing:
+        if not any(f["file_id"] == file_info["file_id"] for f in existing["files"]):
+            movies_collection.update_one(
+                {"_id": existing["_id"]},
+                {"$push": {"files": file_info}}
+            )
+    else:
+        movies_collection.insert_one({
+            "title": title,
+            "files": [file_info]
+        })
 
 def run_flask():
     app.run(host="0.0.0.0", port=8000)
