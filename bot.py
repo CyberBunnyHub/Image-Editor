@@ -91,28 +91,41 @@ async def start_cmd(client: Client, message: Message):
     ])
     await message.reply_photo(photo=image_url, caption=caption, reply_markup=buttons, quote=True)
 
+import re
+
 @bot.on_message(filters.private & filters.text & ~filters.command(["start", "help", "about"]))
 async def handle_movie_query(client: Client, message: Message):
     if message.from_user.is_bot:
         return
-    title_query = message.text.strip().lower()
+
+    title_query = re.sub(r"\s+", " ", message.text.strip())  # normalize
+    regex_query = f".*{re.escape(title_query)}.*"
+
     result = movies_collection.find_one({
-        "title": {"$regex": f"{title_query}", "$options": "i"}
-    })   
+        "$or": [
+            {"title": {"$regex": regex_query, "$options": "i"}},
+            {"files.file_name": {"$regex": regex_query, "$options": "i"}}
+        ]
+    })
+
     if not result:
         return await message.reply("❌ Movie not found in database.")
+    
+    # Show language options
     lang_buttons = []
     files_by_lang = defaultdict(list)
     for file in result["files"]:
-        files_by_lang[file["language"]].append(file)
+        files_by_lang[file.get("language", "Unknown")].append(file)
+
     for lang in files_by_lang:
         lang_buttons.append([InlineKeyboardButton(lang, callback_data=f"lang_{lang}_{result['_id']}")])
+
     await message.reply(
         f"🎬 Movie: `{result['title']}`\nSelect a language to view files:",
         reply_markup=InlineKeyboardMarkup(lang_buttons),
         parse_mode=ParseMode.MARKDOWN
     )
-
+    
 @bot.on_callback_query(filters.regex(r"^lang_(.+?)_(.+)$"))
 async def send_files_by_language(client, callback_query):
     lang, movie_id = callback_query.matches[0].group(1), callback_query.matches[0].group(2)
