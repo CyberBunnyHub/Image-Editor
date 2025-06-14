@@ -96,7 +96,9 @@ async def handle_movie_query(client: Client, message: Message):
     if message.from_user.is_bot:
         return
     title_query = message.text.strip().lower()
-    result = movies_collection.find_one({"title": {"$regex": f"^{title_query}$", "$options": "i"}})
+    result = movies_collection.find_one({
+        "title": {"$regex": f"{title_query}", "$options": "i"}
+    })   
     if not result:
         return await message.reply("❌ Movie not found in database.")
     lang_buttons = []
